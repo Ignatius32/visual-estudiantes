@@ -3,7 +3,7 @@ import sys
 import os
 
 # Add the application directory to the Python path
-sys.path.insert(0, '/var/www/visualizacion-estudiantes')
+sys.path.insert(0, '/var/www/visual-estudiantes')
 
 # Set the FLASK_APP environment variable
 os.environ['FLASK_APP'] = 'run.py'
