@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - Student Data Visualization{% endblock %}
+
+{% block content %}
+<div class="jumbotron bg-light p-4 rounded">
+    <h1 class="display-4">Student Data Visualization</h1>
+    <p class="lead">Upload, analyze, and visualize student data from different spreadsheets.</p>
+    <hr class="my-4">
+    <p>This dashboard helps university administrators make data-driven decisions by providing visualizations of student enrollment, academic performance, and more.</p>
+    <a class="btn btn-primary btn-lg" href="{{ url_for('main.upload_file') }}" role="button">Upload Data</a>
+    <a class="btn btn-secondary btn-lg" href="{{ url_for('main.dashboard') }}" role="button">View Dashboard</a>
+</div>
+
+<div class="alert alert-info mb-4">
+    <div class="d-flex align-items-center mb-2">
+        <h4 class="mb-0">Total Unique Students: {{ total_unique }}</h4>
+    </div>
+    <p class="mb-1">Students can appear in multiple lists:</p>
+    <ul class="mb-0">
+        <li>Active & Re-enrolled: {{ active_and_reenrolled }} students</li>
+        <li>Active & Incoming: {{ active_and_incoming }} students</li>
+        <li>Each student can be enrolled in multiple careers and courses</li>
+    </ul>
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-header">Active Students</div>
+            <div class="card-body">
+                <h5 class="card-title">{{ active_unique }}</h5>
+                <p class="card-text">Unique students</p>
+                <p class="card-text">Total entries: {{ active_count }}</p>
+                <small class="text-white-50">Total entries include students in multiple careers</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-secondary mb-3">
+            <div class="card-header">Inactive Students</div>
+            <div class="card-body">
+                <h5 class="card-title">{{ inactive_unique }}</h5>
+                <p class="card-text">Unique students</p>
+                <p class="card-text">Total entries: {{ inactive_count }}</p>
+                <small class="text-white-50">Total entries include students in multiple careers</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-header">Re-enrolled Students</div>
+            <div class="card-body">
+                <h5 class="card-title">{{ reregistered_unique }}</h5>
+                <p class="card-text">Unique students</p>
+                <p class="card-text">Total entries: {{ reregistered_count }}</p>
+                <small class="text-white-50">Total entries include students in multiple courses</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info mb-3">
+            <div class="card-header">Incoming Students</div>
+            <div class="card-body">
+                <h5 class="card-title">{{ incoming_unique }}</h5>
+                <p class="card-text">Unique students</p>
+                <p class="card-text">Total entries: {{ incoming_count }}</p>
+                <small class="text-white-50">Total entries include students in multiple courses</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                Student Status Distribution
+            </div>
+            <div class="card-body">
+                <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                Quick Actions
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    <a href="{{ url_for('main.upload_file') }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">Upload New Data</h5>
+                            <small>→</small>
+                        </div>
+                        <p class="mb-1">Upload Excel files with student data.</p>
+                    </a>
+                    <a href="{{ url_for('main.dashboard') }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">View Dashboard</h5>
+                            <small>→</small>
+                        </div>
+                        <p class="mb-1">Explore detailed visualizations and reports.</p>
+                    </a>
+                    <a href="{{ url_for('main.student_list') }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">Student Records</h5>
+                            <small>→</small>
+                        </div>
+                        <p class="mb-1">View and manage individual student records.</p>
+                    </a>
+                    <button type="button" class="list-group-item list-group-item-action list-group-item-danger" data-bs-toggle="modal" data-bs-target="#clearDataModal">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">Clear All Data</h5>
+                            <small>⚠️</small>
+                        </div>
+                        <p class="mb-1">Remove all student records from the database.</p>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Clear Data Confirmation Modal -->
+<div class="modal fade" id="clearDataModal" tabindex="-1" aria-labelledby="clearDataModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="clearDataModalLabel">Clear All Data</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <h4 class="alert-heading">Warning!</h4>
+                    <p>You are about to delete all student records from the database. This action cannot be undone.</p>
+                    <hr>
+                    <p class="mb-0">Please confirm that you want to proceed with clearing all data.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('main.clear_data') }}" method="post" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Clear All Data</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    const statusChart = new Chart(statusCtx, {
+        type: 'pie',
+        data: {
+            labels: ['Active', 'Inactive', 'Re-enrolled', 'Incoming'],
+            datasets: [{
+                data: [{{ active_unique }}, {{ inactive_unique }}, {{ reregistered_unique }}, {{ incoming_unique }}],
+                backgroundColor: [
+                    'rgba(13, 110, 253, 0.8)',
+                    'rgba(108, 117, 125, 0.8)',
+                    'rgba(25, 135, 84, 0.8)',
+                    'rgba(13, 202, 240, 0.8)'
+                ],
+                borderColor: [
+                    'rgba(13, 110, 253, 1)',
+                    'rgba(108, 117, 125, 1)',
+                    'rgba(25, 135, 84, 1)',
+                    'rgba(13, 202, 240, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            let percentage = ((context.raw / total) * 100).toFixed(1);
+                            return `${context.label}: ${context.raw} (${percentage}%)`;
+                        }
+                    }
+                },
+                legend: {
+                    position: 'bottom',
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

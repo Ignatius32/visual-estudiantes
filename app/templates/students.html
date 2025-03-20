@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+
+{% block title %}Student Records - Student Visualization Dashboard{% endblock %}
+
+{% block content %}
+<h2>Student Records</h2>
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">All Students</h5>
+        <div class="d-flex gap-2">
+            <select id="status-filter" class="form-select form-select-sm" style="width: auto;">
+                <option value="all">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="re-enrolled">Re-enrolled</option>
+                <option value="incoming">Incoming</option>
+            </select>
+            <input type="text" id="student-search" class="form-control form-control-sm" placeholder="Search students...">
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Legajo</th>
+                        <th>Apellido y Nombre</th>
+                        <th>Documento</th>
+                        <th>Status</th>
+                        <th>Carreras</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if students %}
+                        {% for student in students %}
+                        <tr>
+                            <td>{{ student.legajo }}</td>
+                            <td>{{ student.apellido }}, {{ student.nombre }}</td>
+                            <td>{{ student.tipo_documento }}: {{ student.documento }}</td>
+                            <td>
+                                {% if student.status == 'active' %}
+                                    <span class="badge bg-primary">Active</span>
+                                {% elif student.status == 'inactive' %}
+                                    <span class="badge bg-secondary">Inactive</span>
+                                {% elif student.status == 're-enrolled' %}
+                                    <span class="badge bg-success">Re-enrolled</span>
+                                {% elif student.status == 'incoming' %}
+                                    <span class="badge bg-info">Incoming</span>
+                                {% else %}
+                                    <span class="badge bg-dark">{{ student.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% for career in student.careers %}
+                                    <span class="badge bg-light text-dark">{{ career.name }} ({{ career.plan }})</span>
+                                {% endfor %}
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary view-student" data-id="{{ student.id }}" 
+                                        data-bs-toggle="modal" data-bs-target="#studentDetailModal">View</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center">No student records found. <a href="{{ url_for('main.upload_file') }}">Upload data</a> to get started.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Student Detail Modal -->
+<div class="modal fade" id="studentDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Student Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="student-detail-content">
+                <!-- Content will be loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Student search functionality
+    const searchInput = document.getElementById('student-search');
+    const statusFilter = document.getElementById('status-filter');
+    const tableRows = document.querySelectorAll('tbody tr');
+    
+    function filterTable() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const statusTerm = statusFilter.value.toLowerCase();
+        
+        tableRows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            const statusCell = row.querySelector('td:nth-child(4)').textContent.toLowerCase();
+            const matchesSearch = text.includes(searchTerm);
+            const matchesStatus = statusTerm === 'all' || statusCell.includes(statusTerm);
+            
+            row.style.display = matchesSearch && matchesStatus ? '' : 'none';
+        });
+    }
+    
+    searchInput.addEventListener('keyup', filterTable);
+    statusFilter.addEventListener('change', filterTable);
+    
+    // Student detail modal handler
+    const studentButtons = document.querySelectorAll('.view-student');
+    const studentDetailContent = document.getElementById('student-detail-content');
+    
+    studentButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const studentId = this.getAttribute('data-id');
+            const row = this.closest('tr');
+            const studentData = {
+                name: row.cells[1].textContent,
+                legajo: row.cells[0].textContent,
+                document: row.cells[2].textContent,
+                status: row.cells[3].textContent.trim(),
+                careers: Array.from(row.cells[4].querySelectorAll('.badge')).map(badge => badge.textContent)
+            };
+            
+            // Display student details in modal
+            studentDetailContent.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Personal Information</h6>
+                        <table class="table">
+                            <tr>
+                                <th>Name:</th>
+                                <td>${studentData.name}</td>
+                            </tr>
+                            <tr>
+                                <th>Legajo:</th>
+                                <td>${studentData.legajo}</td>
+                            </tr>
+                            <tr>
+                                <th>Document:</th>
+                                <td>${studentData.document}</td>
+                            </tr>
+                            <tr>
+                                <th>Status:</th>
+                                <td>${studentData.status}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Academic Information</h6>
+                        <table class="table">
+                            <tr>
+                                <th>Careers:</th>
+                                <td>${studentData.careers.join('<br>')}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            `;
+        });
+    });
+});
+</script>
+{% endblock %}

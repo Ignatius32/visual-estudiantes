@@ -1,0 +1,150 @@
+/* Main Styles for Student Visualization Dashboard */
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+    color: #333;
+}
+
+/* Card styling */
+.card {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: none;
+    margin-bottom: 20px;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    font-weight: 600;
+}
+
+/* Make text visible on colored cards */
+.bg-primary .card-header,
+.bg-secondary .card-header,
+.bg-success .card-header,
+.bg-info .card-header,
+.bg-warning .card-header,
+.bg-danger .card-header,
+.bg-dark .card-header {
+    color: #fff;
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.bg-light .card-header {
+    color: #212529;
+}
+
+/* Make card body text visible on colored backgrounds */
+.bg-primary .card-body,
+.bg-secondary .card-body,
+.bg-success .card-body,
+.bg-info .card-body,
+.bg-warning .card-body,
+.bg-danger .card-body,
+.bg-dark .card-body {
+    color: #fff;
+}
+
+.bg-primary .text-white-50,
+.bg-secondary .text-white-50,
+.bg-success .text-white-50,
+.bg-info .text-white-50,
+.bg-warning .text-white-50,
+.bg-danger .text-white-50,
+.bg-dark .text-white-50 {
+    color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Dashboard stats cards */
+.stats-card {
+    transition: transform 0.3s;
+}
+
+.stats-card:hover {
+    transform: translateY(-5px);
+}
+
+/* Table styling */
+.table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.05);
+}
+
+/* Chart containers */
+.chart-container {
+    min-height: 300px;
+    position: relative;
+}
+
+/* Custom navigation active state */
+.navbar-dark .navbar-nav .nav-link.active {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 0.25rem;
+}
+
+/* Upload form styling */
+.file-upload-wrapper {
+    position: relative;
+    margin-bottom: 1.5rem;
+    padding: 2rem;
+    border: 2px dashed #ccc;
+    text-align: center;
+    transition: all 0.3s;
+}
+
+.file-upload-wrapper:hover {
+    border-color: #0d6efd;
+}
+
+/* Dashboard filter section */
+.filters-section {
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 0.25rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Custom badges */
+.badge {
+    font-weight: 500;
+    padding: 0.5em 0.8em;
+}
+
+/* Footer styling */
+footer {
+    margin-top: auto;
+    border-top: 1px solid #dee2e6;
+}
+
+/* Print styling */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    .card {
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+    
+    body {
+        font-size: 12pt;
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .card-title {
+        font-size: 1.25rem;
+    }
+    
+    .display-4 {
+        font-size: 2.5rem;
+    }
+}
