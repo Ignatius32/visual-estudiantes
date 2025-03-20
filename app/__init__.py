@@ -17,6 +17,11 @@ def create_app():
     app.config['SECRET_KEY'] = os.urandom(24)
     app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'uploads')
     
+    # File upload configurations
+    app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+    app.config['UPLOAD_EXTENSIONS'] = ['.xlsx', '.xls']
+    app.config['MAX_UPLOAD_TIME'] = 300  # 5 minutes timeout
+    
     # Ensure the upload directory exists
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     
