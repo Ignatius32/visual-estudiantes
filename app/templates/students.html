@@ -1,22 +1,22 @@
 {% extends 'base.html' %}
 
-{% block title %}Student Records - Student Visualization Dashboard{% endblock %}
+{% block title %}Registros de Estudiantes - Panel de Visualización de Estudiantes{% endblock %}
 
 {% block content %}
-<h2>Student Records</h2>
+<h2>Registros de Estudiantes</h2>
 
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">All Students</h5>
+        <h5 class="mb-0">Todos los Estudiantes</h5>
         <div class="d-flex gap-2">
             <select id="status-filter" class="form-select form-select-sm" style="width: auto;">
-                <option value="all">All Statuses</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="re-enrolled">Re-enrolled</option>
-                <option value="incoming">Incoming</option>
+                <option value="all">Todos los Estados</option>
+                <option value="active">Activos</option>
+                <option value="inactive">Inactivos</option>
+                <option value="re-enrolled">Re-inscriptos</option>
+                <option value="incoming">Ingresantes</option>
             </select>
-            <input type="text" id="student-search" class="form-control form-control-sm" placeholder="Search students...">
+            <input type="text" id="student-search" class="form-control form-control-sm" placeholder="Buscar estudiantes...">
         </div>
     </div>
     <div class="card-body">
@@ -27,9 +27,9 @@
                         <th>Legajo</th>
                         <th>Apellido y Nombre</th>
                         <th>Documento</th>
-                        <th>Status</th>
+                        <th>Estado</th>
                         <th>Carreras</th>
-                        <th>Actions</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -41,13 +41,13 @@
                             <td>{{ student.tipo_documento }}: {{ student.documento }}</td>
                             <td>
                                 {% if student.status == 'active' %}
-                                    <span class="badge bg-primary">Active</span>
+                                    <span class="badge bg-primary">Activo</span>
                                 {% elif student.status == 'inactive' %}
-                                    <span class="badge bg-secondary">Inactive</span>
+                                    <span class="badge bg-secondary">Inactivo</span>
                                 {% elif student.status == 're-enrolled' %}
-                                    <span class="badge bg-success">Re-enrolled</span>
+                                    <span class="badge bg-success">Re-inscripto</span>
                                 {% elif student.status == 'incoming' %}
-                                    <span class="badge bg-info">Incoming</span>
+                                    <span class="badge bg-info">Ingresante</span>
                                 {% else %}
                                     <span class="badge bg-dark">{{ student.status }}</span>
                                 {% endif %}
@@ -59,13 +59,13 @@
                             </td>
                             <td>
                                 <button class="btn btn-sm btn-outline-primary view-student" data-id="{{ student.id }}" 
-                                        data-bs-toggle="modal" data-bs-target="#studentDetailModal">View</button>
+                                        data-bs-toggle="modal" data-bs-target="#studentDetailModal">Ver</button>
                             </td>
                         </tr>
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="6" class="text-center">No student records found. <a href="{{ url_for('main.upload_file') }}">Upload data</a> to get started.</td>
+                            <td colspan="6" class="text-center">No se encontraron registros de estudiantes. <a href="{{ url_for('main.upload_file') }}">Cargue datos</a> para comenzar.</td>
                         </tr>
                     {% endif %}
                 </tbody>
@@ -74,19 +74,19 @@
     </div>
 </div>
 
-<!-- Student Detail Modal -->
+<!-- Modal de Detalles del Estudiante -->
 <div class="modal fade" id="studentDetailModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Student Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title">Detalles del Estudiante</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body" id="student-detail-content">
-                <!-- Content will be loaded dynamically -->
+                <!-- El contenido se cargará dinámicamente -->
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
             </div>
         </div>
     </div>
@@ -96,7 +96,7 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Student search functionality
+    // Funcionalidad de búsqueda de estudiantes
     const searchInput = document.getElementById('student-search');
     const statusFilter = document.getElementById('status-filter');
     const tableRows = document.querySelectorAll('tbody tr');
@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', function() {
     searchInput.addEventListener('keyup', filterTable);
     statusFilter.addEventListener('change', filterTable);
     
-    // Student detail modal handler
+    // Manejador del modal de detalles del estudiante
     const studentButtons = document.querySelectorAll('.view-student');
     const studentDetailContent = document.getElementById('student-detail-content');
     
@@ -134,14 +134,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 careers: Array.from(row.cells[4].querySelectorAll('.badge')).map(badge => badge.textContent)
             };
             
-            // Display student details in modal
+            // Mostrar los detalles del estudiante en el modal
             studentDetailContent.innerHTML = `
                 <div class="row">
                     <div class="col-md-6">
-                        <h6>Personal Information</h6>
+                        <h6>Información Personal</h6>
                         <table class="table">
                             <tr>
-                                <th>Name:</th>
+                                <th>Nombre:</th>
                                 <td>${studentData.name}</td>
                             </tr>
                             <tr>
@@ -149,20 +149,20 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <td>${studentData.legajo}</td>
                             </tr>
                             <tr>
-                                <th>Document:</th>
+                                <th>Documento:</th>
                                 <td>${studentData.document}</td>
                             </tr>
                             <tr>
-                                <th>Status:</th>
+                                <th>Estado:</th>
                                 <td>${studentData.status}</td>
                             </tr>
                         </table>
                     </div>
                     <div class="col-md-6">
-                        <h6>Academic Information</h6>
+                        <h6>Información Académica</h6>
                         <table class="table">
                             <tr>
-                                <th>Careers:</th>
+                                <th>Carreras:</th>
                                 <td>${studentData.careers.join('<br>')}</td>
                             </tr>
                         </table>

@@ -1,10 +1,11 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from werkzeug.utils import secure_filename
+from flask_login import login_user, logout_user, login_required, current_user
 import pandas as pd
 import os
 from datetime import datetime
 
-from app.models import Student, Career, Course, Status, student_career, student_course, student_status
+from app.models import Student, Career, Course, Status, User, student_career, student_course, student_status
 from app import db
 
 main = Blueprint('main', __name__)
@@ -16,23 +17,6 @@ def allowed_file(filename):
 
 @main.route('/')
 def index():
-    # Get raw counts from source files (total entries including duplicates)
-    active_count = db.session.query(Status.source_row_count).filter(
-        Status.name == 'active'
-    ).scalar() or 0
-    
-    inactive_count = db.session.query(Status.source_row_count).filter(
-        Status.name == 'inactive'
-    ).scalar() or 0
-    
-    reregistered_count = db.session.query(Status.source_row_count).filter(
-        Status.name == 're-enrolled'
-    ).scalar() or 0
-    
-    incoming_count = db.session.query(Status.source_row_count).filter(
-        Status.name == 'incoming'
-    ).scalar() or 0
-    
     # Get unique student counts for each status (distinct by student.id)
     active_unique = db.session.query(Student).join(student_status).join(Status).filter(
         Status.name == 'active'
@@ -69,10 +53,6 @@ def index():
         .count()
     
     return render_template('index.html', 
-                        active_count=active_count,
-                        inactive_count=inactive_count,
-                        reregistered_count=reregistered_count,
-                        incoming_count=incoming_count,
                         active_unique=active_unique,
                         inactive_unique=inactive_unique,
                         reregistered_unique=reregistered_unique,
@@ -81,7 +61,36 @@ def index():
                         active_and_reenrolled=active_and_reenrolled,
                         active_and_incoming=active_and_incoming)
 
+@main.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('main.index'))
+    
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        user = User.query.filter_by(username=username).first()
+        
+        if user and user.check_password(password):
+            login_user(user)
+            next_page = request.args.get('next')
+            if not next_page or not next_page.startswith('/'):
+                next_page = url_for('main.index')
+            flash('Inicio de sesión exitoso.', 'success')
+            return redirect(next_page)
+        flash('Usuario o contraseña incorrectos.', 'error')
+    
+    return render_template('login.html')
+
+@main.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('Has cerrado sesión.', 'info')
+    return redirect(url_for('main.index'))
+
 @main.route('/upload', methods=['GET', 'POST'])
+@login_required
 def upload_file():
     if request.method == 'POST':
         if 'file' not in request.files:
@@ -276,21 +285,25 @@ def dashboard():
     return render_template('dashboard.html')
 
 @main.route('/students')
+@login_required
 def student_list():
     students = Student.query.all()
     return render_template('students.html', students=students)
 
 @main.route('/clear-data', methods=['POST'])
+@login_required
 def clear_data():
     try:
         # Delete all records from association tables first
         db.session.execute(student_course.delete())
         db.session.execute(student_career.delete())
+        db.session.execute(student_status.delete())
         
         # Delete records from main tables
         Course.query.delete()
         Career.query.delete()
         Student.query.delete()
+        Status.query.delete()
         
         db.session.commit()
         flash('All data has been successfully cleared from the database.', 'success')

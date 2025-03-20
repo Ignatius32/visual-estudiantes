@@ -1,78 +1,59 @@
 {% extends 'base.html' %}
 
-{% block title %}Upload Data - Student Visualization Dashboard{% endblock %}
+{% block title %}Cargar Datos - Visualización de Datos de Estudiantes{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-8 offset-md-2">
-        <div class="card">
-            <div class="card-header">
-                <h4>Upload Student Data</h4>
-            </div>
-            <div class="card-body">
-                <form method="post" enctype="multipart/form-data">
-                    <div class="mb-3">
-                        <label for="file_type" class="form-label">File Type</label>
-                        <select class="form-select" id="file_type" name="file_type" required>
-                            <option value="" selected disabled>Select the type of list...</option>
-                            <option value="active">Active Students (listaActivosCrub.xlsx)</option>
-                            <option value="inactive">Inactive Students (listaNoActivosCrub.xlsx)</option>
-                            <option value="reregistered">Re-enrolled Students (listaReinscriptosCrub.xlsx)</option>
-                            <option value="incoming">Incoming Students (listaIngresantesCrub.xlsx)</option>
-                        </select>
-                        <div class="form-text">Select the type of student list you are uploading.</div>
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Cargar Datos de Estudiantes</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <h5>Instrucciones</h5>
+                        <p>Por favor seleccione el tipo de archivo apropiado y cargue su archivo Excel:</p>
+                        <ul>
+                            <li>Lista de Estudiantes Activos (.xlsx)</li>
+                            <li>Lista de Estudiantes Inactivos (.xlsx)</li>
+                            <li>Lista de Estudiantes Re-inscriptos (.xlsx)</li>
+                            <li>Lista de Estudiantes Ingresantes (.xlsx)</li>
+                        </ul>
+                        <p class="mb-0"><strong>Nota:</strong> Los archivos deben estar en formato Excel (.xlsx o .xls)</p>
                     </div>
 
-                    <div class="file-upload-wrapper mb-4">
+                    <form method="post" enctype="multipart/form-data" class="mt-4">
                         <div class="mb-3">
-                            <label for="file" class="form-label">Excel File</label>
+                            <label for="file_type" class="form-label">Tipo de Archivo</label>
+                            <select class="form-select" id="file_type" name="file_type" required>
+                                <option value="" selected disabled>Seleccione tipo de archivo...</option>
+                                <option value="active">Estudiantes Activos</option>
+                                <option value="inactive">Estudiantes Inactivos</option>
+                                <option value="reregistered">Estudiantes Re-inscriptos</option>
+                                <option value="incoming">Estudiantes Ingresantes</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="file" class="form-label">Seleccionar Archivo Excel</label>
                             <input type="file" class="form-control" id="file" name="file" accept=".xlsx,.xls" required>
                         </div>
-                        
-                        <div class="alert alert-info">
-                            <h5>Expected File Structure</h5>
-                            <p>The Excel file should contain the following columns:</p>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <h6>Common Fields:</h6>
-                                    <ul>
-                                        <li>Legajo</li>
-                                        <li>Nombre</li>
-                                        <li>Apellido</li>
-                                        <li>Tipo Documento</li>
-                                        <li>Documento</li>
-                                        <li>Nacionalidad</li>
-                                        <li>Fecha Nacimiento</li>
-                                        <li>Domicilio</li>
-                                        <li>Domicilio origen/Domicilio Origen</li>
-                                        <li>Telefono</li>
-                                        <li>Correo</li>
-                                        <li>Carrera</li>
-                                        <li>Plan</li>
-                                        <li>Version</li>
-                                        <li>Cuil</li>
-                                        <li>Sexo</li>
-                                    </ul>
-                                </div>
-                                <div class="col-md-6">
-                                    <h6>Additional Fields for Specific Lists:</h6>
-                                    <ul>
-                                        <li><strong>Re-enrolled and Incoming Lists:</strong>
-                                            <ul>
-                                                <li>Materia (Course)</li>
-                                            </ul>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary">Upload and Process</button>
-                        <a href="{{ url_for('main.index') }}" class="btn btn-secondary">Cancel</a>
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">Cargar Archivo</button>
+                            <a href="{{ url_for('main.index') }}" class="btn btn-secondary">Cancelar</a>
+                        </div>
+                    </form>
+
+                    <div class="mt-4">
+                        <h5>Limpiar Base de Datos</h5>
+                        <p class="text-muted">Utilice esta opción para eliminar todos los datos existentes de la base de datos. Esta acción no se puede deshacer.</p>
+                        <form action="{{ url_for('main.clear_data') }}" method="post" onsubmit="return confirm('¿Está seguro de que desea borrar todos los datos? Esta acción no se puede deshacer.');">
+                            <button type="submit" class="btn btn-danger">Borrar Todos los Datos</button>
+                        </form>
                     </div>
-                </form>
+                </div>
             </div>
         </div>
     </div>

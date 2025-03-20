@@ -1,56 +1,27 @@
 {% extends 'base.html' %}
 
-{% block title %}Analytics Dashboard{% endblock %}
+{% block title %}Panel de Análisis{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
-    <!-- Global Filters -->
+    <!-- Fixed Global Filters at the top -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0">Filters</h5>
+                    <h5 class="mb-0">Filtros</h5>
                 </div>
                 <div class="card-body">
-                    <div class="d-flex gap-2 align-items-center">
-                        <select id="careerFilter" class="form-select" style="width: auto;">
-                            <option value="">All Careers</option>
-                        </select>
-                        <span class="text-muted ms-2">Select a career to filter all visualizations</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Student Distribution Charts -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Student Distribution</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h6>Active/Inactive Students</h6>
-                                </div>
-                                <div class="card-body">
-                                    <canvas id="enrollmentChart"></canvas>
-                                </div>
-                            </div>
+                    <div class="d-flex gap-2 align-items-center justify-content-between">
+                        <div>
+                            <select id="careerFilter" class="form-select" style="width: auto;">
+                                <option value="">Todas las Carreras</option>
+                            </select>
+                            <span class="text-muted ms-2">Seleccione una carrera para filtrar todas las visualizaciones</span>
                         </div>
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h6>Re-enrolled/Incoming Students</h6>
-                                </div>
-                                <div class="card-body">
-                                    <canvas id="registrationChart"></canvas>
-                                </div>
-                            </div>
+                        <div class="btn-group">
+                            <button class="btn btn-outline-primary" id="prevSlide">&laquo; Anterior</button>
+                            <button class="btn btn-outline-primary" id="nextSlide">Siguiente &raquo;</button>
                         </div>
                     </div>
                 </div>
@@ -58,53 +29,41 @@
         </div>
     </div>
 
-    <!-- Course Distribution Chart -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Course Distribution</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="courseDistributionChart"></canvas>
+    <!-- Carousel / Slide container -->
+    <div id="dashboardCarousel" class="carousel slide" data-bs-ride="false" data-bs-interval="false">
+        <div class="carousel-indicators">
+            <button type="button" data-bs-target="#dashboardCarousel" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Distribución por Carrera"></button>
+            <button type="button" data-bs-target="#dashboardCarousel" data-bs-slide-to="1" aria-label="Distribución por Curso"></button>
+        </div>
+        
+        <div class="carousel-inner">
+            <!-- Slide 1: Career Distribution Chart -->
+            <div class="carousel-item active">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5>Distribución por Carrera</h5>
+                        <span class="badge bg-primary">1/2</span>
+                    </div>
+                    <div class="card-body">
+                        <div style="height: 70vh">
+                            <canvas id="careerDistributionChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- Career Distribution Charts - Hidden when career is filtered -->
-    <div id="careerChartsSection" class="row mb-4">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Career Distribution - Re-enrolled Students</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="reEnrolledCareersChart"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Career Distribution - Incoming Students</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="incomingCareersChart"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Gender Distribution Chart -->
-    <div class="row">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Gender Distribution</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="genderChart"></canvas>
+            
+            <!-- Slide 2: Course Distribution Chart -->
+            <div class="carousel-item">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5>Distribución por Curso</h5>
+                        <span class="badge bg-primary">2/2</span>
+                    </div>
+                    <div class="card-body">
+                        <div style="height: 70vh">
+                            <canvas id="courseDistributionChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -115,6 +74,7 @@
 {% block scripts %}
 <script>
 let charts = {};
+let carousel;
 
 function createOrUpdateChart(chartId, config) {
     if (charts[chartId]) {
@@ -125,14 +85,49 @@ function createOrUpdateChart(chartId, config) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    loadDashboardData();
+    // Initialize the carousel
+    carousel = new bootstrap.Carousel(document.getElementById('dashboardCarousel'), {
+        interval: false,
+        wrap: true,
+        keyboard: true
+    });
     
+    // Add event listeners for previous/next buttons
+    document.getElementById('prevSlide').addEventListener('click', function() {
+        carousel.prev();
+    });
+    
+    document.getElementById('nextSlide').addEventListener('click', function() {
+        carousel.next();
+    });
+    
+    // Add keyboard navigation
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowLeft') {
+            carousel.prev();
+        } else if (e.key === 'ArrowRight') {
+            carousel.next();
+        }
+    });
+    
+    // Add event listener for career filter change
     document.getElementById('careerFilter').addEventListener('change', function() {
         const selectedCareer = this.value;
-        // Toggle visibility of career charts section
-        document.getElementById('careerChartsSection').style.display = selectedCareer ? 'none' : '';
-        console.log("Career filter changed to:", selectedCareer);
+        console.log("Filtro de carrera cambiado a:", selectedCareer);
         loadDashboardData();
+    });
+    
+    // Initialize charts with data
+    loadDashboardData();
+    
+    // Handle carousel events to ensure charts resize properly
+    document.getElementById('dashboardCarousel').addEventListener('slid.bs.carousel', function() {
+        // Resize all charts to ensure proper rendering
+        Object.values(charts).forEach(chart => {
+            if (chart && typeof chart.resize === 'function') {
+                chart.resize();
+            }
+        });
     });
 });
 
@@ -143,24 +138,17 @@ function loadDashboardData() {
         url += `?career=${encodeURIComponent(careerFilter)}`;
     }
     
-    console.log("Fetching data from:", url);
+    console.log("Obteniendo datos de:", url);
     
     fetch(url)
         .then(response => {
             if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
+                throw new Error(`Error HTTP! Estado: ${response.status}`);
             }
             return response.json();
         })
         .then(data => {
-            console.log('Received data from API:', data);  // Debug: Log the entire data object
-            
-            // Debug: Check if course_distribution data exists
-            console.log('course_distribution exists:', !!data.course_distribution);
-            console.log('re-enrolled exists:', data.course_distribution && !!data.course_distribution['re-enrolled']);
-            console.log('incoming exists:', data.course_distribution && !!data.course_distribution['incoming']);
-            console.log('re-enrolled count:', data.course_distribution && Object.keys(data.course_distribution['re-enrolled']).length);
-            console.log('incoming count:', data.course_distribution && Object.keys(data.course_distribution['incoming']).length);
+            console.log('Datos recibidos de la API:', data);
             
             // Populate career filter if empty
             const careerFilter = document.getElementById('careerFilter');
@@ -173,52 +161,99 @@ function loadDashboardData() {
             updateCharts(data);
         })
         .catch(error => {
-            console.error('Error loading dashboard data:', error);
+            console.error('Error al cargar datos del panel:', error);
         });
 }
 
 function updateCharts(data) {
-    // Enrollment Status Chart (Active/Inactive)
-    createOrUpdateChart('enrollmentChart', {
-        type: 'pie',
-        data: {
-            labels: Object.keys(data.status_counts.enrollment),
-            datasets: [{
-                data: Object.values(data.status_counts.enrollment),
-                backgroundColor: [
-                    'rgba(54, 162, 235, 0.7)',
-                    'rgba(255, 99, 132, 0.7)'
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
-            }
-        }
-    });
+    // Calculate totals for use in labels
+    const totalReEnrolled = Object.values(data.career_distribution['re-enrolled'] || {}).reduce((a, b) => a + b, 0);
+    const totalIncoming = Object.values(data.career_distribution['incoming'] || {}).reduce((a, b) => a + b, 0);
 
-    // Registration Status Chart (Re-enrolled/Incoming)
-    createOrUpdateChart('registrationChart', {
-        type: 'pie',
+    // Career Distribution Chart (Stacked Bar - New)
+    const careerLabels = Array.from(new Set([
+        ...Object.keys(data.career_distribution['re-enrolled'] || {}),
+        ...Object.keys(data.career_distribution['incoming'] || {})
+    ]));
+    
+    const reEnrolledData = careerLabels.map(label => 
+        (data.career_distribution['re-enrolled'] || {})[label] || 0
+    );
+    
+    const incomingData = careerLabels.map(label => 
+        (data.career_distribution['incoming'] || {})[label] || 0
+    );
+    
+    // Create labels with totals for each career
+    const formattedCareerLabels = careerLabels.map((label, index) => {
+        const careerTotal = reEnrolledData[index] + incomingData[index];
+        return `${label} (${careerTotal})`;
+    });
+    
+    console.log("Creando gráfico de distribución de carreras con", careerLabels.length, "carreras");
+    createOrUpdateChart('careerDistributionChart', {
+        type: 'bar',
         data: {
-            labels: Object.keys(data.status_counts.registration),
-            datasets: [{
-                data: Object.values(data.status_counts.registration),
-                backgroundColor: [
-                    'rgba(75, 192, 192, 0.7)',
-                    'rgba(255, 206, 86, 0.7)'
-                ]
-            }]
+            labels: formattedCareerLabels,
+            datasets: [
+                {
+                    label: `Estudiantes Re-inscriptos (${totalReEnrolled})`,
+                    data: reEnrolledData,
+                    backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: `Estudiantes Ingresantes (${totalIncoming})`,
+                    data: incomingData,
+                    backgroundColor: 'rgba(255, 206, 86, 0.7)',
+                    borderColor: 'rgba(255, 206, 86, 1)',
+                    borderWidth: 1
+                }
+            ]
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    stacked: true,
+                    ticks: {
+                        autoSkip: false,
+                        maxRotation: 90,
+                        minRotation: 0
+                    }
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Número de Estudiantes'
+                    }
+                }
+            },
             plugins: {
-                legend: {
-                    position: 'bottom'
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.dataset.label || '';
+                            const value = context.raw || 0;
+                            return `${label}: ${value} estudiantes`;
+                        },
+                        afterLabel: function(context) {
+                            const index = context.dataIndex;
+                            const total = reEnrolledData[index] + incomingData[index];
+                            return `Total: ${total} estudiantes`;
+                        }
+                    }
+                },
+                title: {
+                    display: true,
+                    text: `Estudiantes por Carrera según Estado de Inscripción (Total: ${totalReEnrolled + totalIncoming})`,
+                    font: {
+                        size: 16
+                    }
                 }
             }
         }
@@ -230,40 +265,42 @@ function updateCharts(data) {
         ...Object.keys(data.course_distribution['incoming'] || {})
     ]));
 
-    const reEnrolledData = courseLabels.map(label => 
+    const courseReEnrolledData = courseLabels.map(label => 
         (data.course_distribution['re-enrolled'] || {})[label] || 0
     );
     
-    const incomingData = courseLabels.map(label => 
+    const courseIncomingData = courseLabels.map(label => 
         (data.course_distribution['incoming'] || {})[label] || 0
     );
-
-    // Enhanced debug for course distribution
-    console.log('Course distribution raw data:', JSON.stringify(data.course_distribution));
-    console.log('Course labels (count: ' + courseLabels.length + '):', courseLabels);
-    console.log('Re-enrolled data (count: ' + reEnrolledData.length + '):', reEnrolledData);
-    console.log('Incoming data (count: ' + incomingData.length + '):', incomingData);
-    console.log('Any non-zero re-enrolled values:', reEnrolledData.some(val => val > 0));
-    console.log('Any non-zero incoming values:', incomingData.some(val => val > 0));
+    
+    // Calculate totals for course distributions
+    const totalCourseReEnrolled = courseReEnrolledData.reduce((a, b) => a + b, 0);
+    const totalCourseIncoming = courseIncomingData.reduce((a, b) => a + b, 0);
+    
+    // Create labels with totals for each course
+    const formattedCourseLabels = courseLabels.map((label, index) => {
+        const courseTotal = courseReEnrolledData[index] + courseIncomingData[index];
+        return `${label} (${courseTotal})`;
+    });
     
     // Only create chart if we have data
     if (courseLabels.length > 0) {
-        console.log("Creating course distribution chart with", courseLabels.length, "labels");
+        console.log("Creando gráfico de distribución de cursos con", courseLabels.length, "etiquetas");
         createOrUpdateChart('courseDistributionChart', {
             type: 'bar',
             data: {
-                labels: courseLabels,
+                labels: formattedCourseLabels,
                 datasets: [
                     {
-                        label: 'Re-enrolled Students',
-                        data: reEnrolledData,
+                        label: `Estudiantes Re-inscriptos (${totalCourseReEnrolled})`,
+                        data: courseReEnrolledData,
                         backgroundColor: 'rgba(75, 192, 192, 0.7)',
                         borderColor: 'rgba(75, 192, 192, 1)',
                         borderWidth: 1
                     },
                     {
-                        label: 'Incoming Students',
-                        data: incomingData,
+                        label: `Estudiantes Ingresantes (${totalCourseIncoming})`,
+                        data: courseIncomingData,
                         backgroundColor: 'rgba(255, 206, 86, 0.7)',
                         borderColor: 'rgba(255, 206, 86, 1)',
                         borderWidth: 1
@@ -272,9 +309,10 @@ function updateCharts(data) {
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 scales: {
                     x: {
-                        stacked: false,
+                        stacked: true,
                         ticks: {
                             autoSkip: false,
                             maxRotation: 90,
@@ -282,21 +320,38 @@ function updateCharts(data) {
                         }
                     },
                     y: {
-                        beginAtZero: true,
-                        stacked: false
+                        stacked: true,
+                        beginAtZero: true
                     }
                 },
                 plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 15
+                        }
+                    },
                     title: {
                         display: true,
-                        text: document.getElementById('careerFilter').value || 'All Careers'
+                        text: `Cursos - ${document.getElementById('careerFilter').value || 'Todas las Carreras'} (Total: ${totalCourseReEnrolled + totalCourseIncoming})`,
+                        font: {
+                            size: 16
+                        }
                     },
                     tooltip: {
                         callbacks: {
                             label: function(context) {
                                 const label = context.dataset.label || '';
                                 const value = context.raw || 0;
-                                return `${label}: ${value} students`;
+                                const totalForCourse = courseReEnrolledData[context.dataIndex] + courseIncomingData[context.dataIndex];
+                                const percentage = totalForCourse > 0 ? ((value / totalForCourse) * 100).toFixed(1) : 0;
+                                return `${label}: ${value} estudiantes (${percentage}%)`;
+                            },
+                            afterLabel: function(context) {
+                                const index = context.dataIndex;
+                                const total = courseReEnrolledData[index] + courseIncomingData[index];
+                                return `Total: ${total} estudiantes`;
                             }
                         }
                     }
@@ -304,118 +359,19 @@ function updateCharts(data) {
             }
         });
     } else {
-        console.warn("No course data to display in chart");
-        document.getElementById('courseDistributionChart').getContext('2d').clearRect(
-            0, 0, 
-            document.getElementById('courseDistributionChart').width, 
-            document.getElementById('courseDistributionChart').height
-        );
+        console.warn("No hay datos de cursos para mostrar en el gráfico");
+        const canvas = document.getElementById('courseDistributionChart');
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         
         // Display a message when no data is available
-        const ctx = document.getElementById('courseDistributionChart').getContext('2d');
         ctx.font = '20px Arial';
         ctx.textAlign = 'center';
         ctx.fillStyle = '#999';
-        ctx.fillText('No course data available for this selection', 
-            document.getElementById('courseDistributionChart').width/2, 
-            document.getElementById('courseDistributionChart').height/2);
+        ctx.fillText('No hay datos de cursos disponibles para esta selección', 
+            canvas.width/2, 
+            canvas.height/2);
     }
-
-    // Only update career charts if no career is selected
-    if (!document.getElementById('careerFilter').value) {
-        // Career charts with distinct student counts
-        createOrUpdateChart('reEnrolledCareersChart', {
-            type: 'pie',
-            data: {
-                labels: Object.keys(data.career_distribution['re-enrolled']),
-                datasets: [{
-                    data: Object.values(data.career_distribution['re-enrolled']),
-                    backgroundColor: [
-                        'rgba(54, 162, 235, 0.7)',
-                        'rgba(255, 99, 132, 0.7)',
-                        'rgba(75, 192, 192, 0.7)',
-                        'rgba(255, 206, 86, 0.7)'
-                    ]
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const value = context.raw;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((value / total) * 100).toFixed(1);
-                                return `${context.label}: ${value} students (${percentage}%)`;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-
-        createOrUpdateChart('incomingCareersChart', {
-            type: 'pie',
-            data: {
-                labels: Object.keys(data.career_distribution['incoming']),
-                datasets: [{
-                    data: Object.values(data.career_distribution['incoming']),
-                    backgroundColor: [
-                        'rgba(54, 162, 235, 0.7)',
-                        'rgba(255, 99, 132, 0.7)',
-                        'rgba(75, 192, 192, 0.7)',
-                        'rgba(255, 206, 86, 0.7)'
-                    ]
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const value = context.raw;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((value / total) * 100).toFixed(1);
-                                return `${context.label}: ${value} students (${percentage}%)`;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-
-    // Gender Distribution Chart
-    createOrUpdateChart('genderChart', {
-        type: 'pie',
-        data: {
-            labels: Object.keys(data.gender_distribution),
-            datasets: [{
-                data: Object.values(data.gender_distribution),
-                backgroundColor: [
-                    'rgba(54, 162, 235, 0.7)',
-                    'rgba(255, 99, 132, 0.7)',
-                    'rgba(75, 192, 192, 0.7)'
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
-            }
-        }
-    });
 }
 </script>
 {% endblock %}

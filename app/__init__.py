@@ -1,10 +1,12 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager
 import os
 from datetime import datetime
 
 # Initialize SQLAlchemy
 db = SQLAlchemy()
+login_manager = LoginManager()
 
 def create_app():
     app = Flask(__name__)
@@ -21,6 +23,16 @@ def create_app():
     # Initialize the database with the app
     db.init_app(app)
     
+    # Initialize login manager
+    login_manager.init_app(app)
+    login_manager.login_view = 'main.login'
+    login_manager.login_message = 'Por favor inicie sesión para acceder a esta página.'
+    
+    @login_manager.user_loader
+    def load_user(id):
+        from app.models import User
+        return User.query.get(int(id))
+    
     with app.app_context():
         # Import routes after db initialization to avoid circular imports
         from app.routes import main, api_bp
@@ -31,8 +43,9 @@ def create_app():
         
         # Create database tables and initialize default data
         db.create_all()
-        from app.models import Status
+        from app.models import Status, User
         Status.initialize_default_statuses()
+        User.initialize_default_admin()
     
     # Add template context processor for current year
     @app.context_processor

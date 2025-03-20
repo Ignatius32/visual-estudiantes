@@ -146,20 +146,29 @@ def student_stats():
         for career_name, student_count in careers_query.all():
             career_distribution[status_name][career_name] = student_count
     
-    # Gender distribution with career filter
-    gender_query = db.session.query(
-        Student.sexo,
-        func.count(func.distinct(Student.id)).label('student_count')
-    ).filter(Student.sexo != '')
+    # Gender distribution split by status groups with career filter
+    def get_gender_distribution(status_names):
+        gender_query = db.session.query(
+            Student.sexo,
+            func.count(func.distinct(Student.id)).label('student_count')
+        ).join(student_status)\
+        .join(Status)\
+        .filter(Student.sexo != '')\
+        .filter(Status.name.in_(status_names))
+        
+        if selected_career:
+            gender_query = gender_query.join(student_career)\
+                .join(Career)\
+                .filter(Career.name == selected_career)
+        
+        gender_results = gender_query.group_by(Student.sexo).all()
+        return {
+            gender: count for gender, count in gender_results if gender
+        }
     
-    if selected_career:
-        gender_query = gender_query.join(student_career)\
-            .join(Career)\
-            .filter(Career.name == selected_career)
-    
-    gender_results = gender_query.group_by(Student.sexo).all()
     gender_distribution = {
-        gender: count for gender, count in gender_results if gender
+        'enrollment': get_gender_distribution(['active', 'inactive']),
+        'registration': get_gender_distribution(['re-enrolled', 'incoming'])
     }
     
     result = {
