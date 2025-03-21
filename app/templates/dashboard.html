@@ -29,6 +29,7 @@
         </div>
     </div>
 
+
     <!-- Carousel / Slide container -->
     <div id="dashboardCarousel" class="carousel slide" data-bs-ride="false" data-bs-interval="false">
         <div class="carousel-indicators">
@@ -75,53 +76,137 @@
 <script>
 let charts = {};
 let carousel;
+let baseUrl = '';
+
+// Determine the base URL for API calls
+// This will allow the app to work in both local and Apache hosted environments
+(function() {
+    // Get the base URL from the current location
+    const pathParts = window.location.pathname.split('/');
+    if (pathParts.includes('visual-estudiantes')) {
+        // If deployed under a subdirectory in Apache
+        baseUrl = '/visual-estudiantes';
+    }
+    console.log(`Base URL for API calls: ${baseUrl}`);
+})();
+
+// Toggle debug section
+function toggleDebug() {
+    const debugInfo = document.getElementById('debugInfo');
+    debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
+}
+
+// Debug logging function
+function logDebug(sectionId, message, isError = false) {
+    const section = document.getElementById(sectionId);
+    if (section) {
+        section.textContent = message;
+        if (isError) {
+            section.style.color = 'red';
+        } else {
+            section.style.color = 'green';
+        }
+    }
+    console.log(`[${sectionId}] ${message}`);
+}
+
+function checkDependencies() {
+    // Check if Bootstrap is available
+    if (typeof bootstrap !== 'undefined') {
+        logDebug('debugBootstrap', 'Disponible (v' + bootstrap.Carousel.VERSION + ')');
+    } else {
+        logDebug('debugBootstrap', 'No disponible - Bootstrap no está cargado correctamente', true);
+    }
+    
+    // Check if Chart.js is available
+    if (typeof Chart !== 'undefined') {
+        logDebug('debugChartJs', 'Disponible (v' + Chart.version + ')');
+    } else {
+        logDebug('debugChartJs', 'No disponible - Chart.js no está cargado correctamente', true);
+    }
+}
 
 function createOrUpdateChart(chartId, config) {
-    if (charts[chartId]) {
-        charts[chartId].destroy();
+    try {
+        if (charts[chartId]) {
+            charts[chartId].destroy();
+        }
+        const canvas = document.getElementById(chartId);
+        if (!canvas) {
+            throw new Error(`Canvas with id ${chartId} not found`);
+        }
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            throw new Error(`Could not get 2d context for ${chartId}`);
+        }
+        charts[chartId] = new Chart(ctx, config);
+        return true;
+    } catch (error) {
+        logDebug('debugChartJs', `Error creating chart ${chartId}: ${error.message}`, true);
+        console.error('Error creating chart:', error);
+        return false;
     }
-    const ctx = document.getElementById(chartId).getContext('2d');
-    charts[chartId] = new Chart(ctx, config);
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize the carousel
-    carousel = new bootstrap.Carousel(document.getElementById('dashboardCarousel'), {
-        interval: false,
-        wrap: true,
-        keyboard: true
-    });
+    logDebug('debugInit', 'Inicializando página de dashboard...');
+    
+    // Check dependencies
+    checkDependencies();
+    
+    // Continue only if dependencies are available
+    if (typeof bootstrap === 'undefined' || typeof Chart === 'undefined') {
+        return;
+    }
+    
+    // Initialize the carousel with a try-catch to catch any errors
+    try {
+        logDebug('debugInit', 'Inicializando carrusel...');
+        carousel = new bootstrap.Carousel(document.getElementById('dashboardCarousel'), {
+            interval: false,
+            wrap: true,
+            keyboard: true
+        });
+        logDebug('debugInit', 'Carrusel inicializado correctamente');
+    } catch (error) {
+        logDebug('debugInit', `Error al inicializar carrusel: ${error.message}`, true);
+        console.error('Carousel initialization error:', error);
+    }
     
     // Add event listeners for previous/next buttons
     document.getElementById('prevSlide').addEventListener('click', function() {
-        carousel.prev();
+        logDebug('debugInit', 'Botón anterior clickeado');
+        if (carousel) carousel.prev();
     });
     
     document.getElementById('nextSlide').addEventListener('click', function() {
-        carousel.next();
+        logDebug('debugInit', 'Botón siguiente clickeado');
+        if (carousel) carousel.next();
     });
     
     // Add keyboard navigation
     document.addEventListener('keydown', function(e) {
         if (e.key === 'ArrowLeft') {
-            carousel.prev();
+            if (carousel) carousel.prev();
         } else if (e.key === 'ArrowRight') {
-            carousel.next();
+            if (carousel) carousel.next();
         }
     });
     
     // Add event listener for career filter change
     document.getElementById('careerFilter').addEventListener('change', function() {
         const selectedCareer = this.value;
-        console.log("Filtro de carrera cambiado a:", selectedCareer);
+        logDebug('debugInit', `Filtro de carrera cambiado a: ${selectedCareer || 'Todas'}`);
         loadDashboardData();
     });
     
     // Initialize charts with data
+    logDebug('debugInit', 'Cargando datos iniciales del dashboard...');
     loadDashboardData();
     
     // Handle carousel events to ensure charts resize properly
-    document.getElementById('dashboardCarousel').addEventListener('slid.bs.carousel', function() {
+    document.getElementById('dashboardCarousel').addEventListener('slid.bs.carousel', function(event) {
+        logDebug('debugInit', `Slide cambiado a: ${event.to + 1}`);
         // Resize all charts to ensure proper rendering
         Object.values(charts).forEach(chart => {
             if (chart && typeof chart.resize === 'function') {
@@ -129,16 +214,18 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+    
+    logDebug('debugInit', 'Inicialización completada');
 });
 
 function loadDashboardData() {
     const careerFilter = document.getElementById('careerFilter').value;
-    let url = '/api/student-stats';
+    let url = baseUrl + '/api/student-stats';
     if (careerFilter) {
         url += `?career=${encodeURIComponent(careerFilter)}`;
     }
     
-    console.log("Obteniendo datos de:", url);
+    logDebug('debugApi', `Obteniendo datos de: ${url}...`);
     
     fetch(url)
         .then(response => {
@@ -148,40 +235,56 @@ function loadDashboardData() {
             return response.json();
         })
         .then(data => {
-            console.log('Datos recibidos de la API:', data);
+            logDebug('debugApi', 'Datos recibidos correctamente');
+            
+            // Log a sample of the data to verify structure
+            try {
+                const dataStr = JSON.stringify({
+                    careers: data.careers?.length || 0,
+                    statuses: data.status_counts || 'No disponible',
+                    courses: Object.keys(data.course_distribution?.['re-enrolled'] || {}).length || 0
+                });
+                logDebug('debugData', dataStr.substring(0, 150) + (dataStr.length > 150 ? '...' : ''));
+            } catch (error) {
+                logDebug('debugData', `Error analizando datos: ${error.message}`, true);
+            }
             
             // Populate career filter if empty
             const careerFilter = document.getElementById('careerFilter');
-            if (careerFilter.options.length <= 1) {
+            if (careerFilter.options.length <= 1 && data.careers && data.careers.length > 0) {
                 data.careers.forEach(career => {
                     const option = new Option(career, career);
                     careerFilter.add(option);
                 });
+                logDebug('debugApi', `Carreras cargadas: ${data.careers.length}`);
             }
             updateCharts(data);
         })
         .catch(error => {
+            logDebug('debugApi', `Error al cargar datos: ${error.message}`, true);
             console.error('Error al cargar datos del panel:', error);
         });
 }
 
 function updateCharts(data) {
+    logDebug('debugChartJs', 'Actualizando gráficos con datos recibidos...');
+    
     // Calculate totals for use in labels
-    const totalReEnrolled = Object.values(data.career_distribution['re-enrolled'] || {}).reduce((a, b) => a + b, 0);
-    const totalIncoming = Object.values(data.career_distribution['incoming'] || {}).reduce((a, b) => a + b, 0);
+    const totalReEnrolled = Object.values(data.career_distribution?.['re-enrolled'] || {}).reduce((a, b) => a + b, 0);
+    const totalIncoming = Object.values(data.career_distribution?.['incoming'] || {}).reduce((a, b) => a + b, 0);
 
     // Career Distribution Chart (Stacked Bar - New)
     const careerLabels = Array.from(new Set([
-        ...Object.keys(data.career_distribution['re-enrolled'] || {}),
-        ...Object.keys(data.career_distribution['incoming'] || {})
+        ...Object.keys(data.career_distribution?.['re-enrolled'] || {}),
+        ...Object.keys(data.career_distribution?.['incoming'] || {})
     ]));
     
     const reEnrolledData = careerLabels.map(label => 
-        (data.career_distribution['re-enrolled'] || {})[label] || 0
+        (data.career_distribution?.['re-enrolled'] || {})[label] || 0
     );
     
     const incomingData = careerLabels.map(label => 
-        (data.career_distribution['incoming'] || {})[label] || 0
+        (data.career_distribution?.['incoming'] || {})[label] || 0
     );
     
     // Create labels with totals for each career
@@ -190,8 +293,9 @@ function updateCharts(data) {
         return `${label} (${careerTotal})`;
     });
     
-    console.log("Creando gráfico de distribución de carreras con", careerLabels.length, "carreras");
-    createOrUpdateChart('careerDistributionChart', {
+    logDebug('debugChartJs', `Creando gráfico de carreras con ${careerLabels.length} etiquetas`);
+    
+    const careerChartSuccess = createOrUpdateChart('careerDistributionChart', {
         type: 'bar',
         data: {
             labels: formattedCareerLabels,
@@ -258,19 +362,23 @@ function updateCharts(data) {
             }
         }
     });
+    
+    if (careerChartSuccess) {
+        logDebug('debugChartJs', 'Gráfico de carreras creado correctamente');
+    }
 
     // Combined Course Distribution Chart
     const courseLabels = Array.from(new Set([
-        ...Object.keys(data.course_distribution['re-enrolled'] || {}),
-        ...Object.keys(data.course_distribution['incoming'] || {})
+        ...Object.keys(data.course_distribution?.['re-enrolled'] || {}),
+        ...Object.keys(data.course_distribution?.['incoming'] || {})
     ]));
 
     const courseReEnrolledData = courseLabels.map(label => 
-        (data.course_distribution['re-enrolled'] || {})[label] || 0
+        (data.course_distribution?.['re-enrolled'] || {})[label] || 0
     );
     
     const courseIncomingData = courseLabels.map(label => 
-        (data.course_distribution['incoming'] || {})[label] || 0
+        (data.course_distribution?.['incoming'] || {})[label] || 0
     );
     
     // Calculate totals for course distributions
@@ -285,8 +393,9 @@ function updateCharts(data) {
     
     // Only create chart if we have data
     if (courseLabels.length > 0) {
-        console.log("Creando gráfico de distribución de cursos con", courseLabels.length, "etiquetas");
-        createOrUpdateChart('courseDistributionChart', {
+        logDebug('debugChartJs', `Creando gráfico de cursos con ${courseLabels.length} etiquetas`);
+        
+        const courseChartSuccess = createOrUpdateChart('courseDistributionChart', {
             type: 'bar',
             data: {
                 labels: formattedCourseLabels,
@@ -358,19 +467,36 @@ function updateCharts(data) {
                 }
             }
         });
-    } else {
-        console.warn("No hay datos de cursos para mostrar en el gráfico");
-        const canvas = document.getElementById('courseDistributionChart');
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // Display a message when no data is available
-        ctx.font = '20px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#999';
-        ctx.fillText('No hay datos de cursos disponibles para esta selección', 
-            canvas.width/2, 
-            canvas.height/2);
+        if (courseChartSuccess) {
+            logDebug('debugChartJs', 'Gráfico de cursos creado correctamente');
+        }
+    } else {
+        logDebug('debugChartJs', 'No hay datos de cursos para mostrar', true);
+        
+        try {
+            const canvas = document.getElementById('courseDistributionChart');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    
+                    // Display a message when no data is available
+                    ctx.font = '20px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = '#999';
+                    ctx.fillText('No hay datos de cursos disponibles para esta selección', 
+                        canvas.width/2, 
+                        canvas.height/2);
+                } else {
+                    logDebug('debugChartJs', 'No se pudo obtener el contexto 2D del canvas', true);
+                }
+            } else {
+                logDebug('debugChartJs', 'No se encontró el canvas courseDistributionChart', true);
+            }
+        } catch (error) {
+            logDebug('debugChartJs', `Error al limpiar el canvas: ${error.message}`, true);
+        }
     }
 }
 </script>
