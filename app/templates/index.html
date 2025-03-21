@@ -106,6 +106,105 @@
             </a>
         </div>
     </div>
+
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Gestión de Datos</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{{ url_for('main.upload_file') }}" class="btn btn-primary">Cargar Excel</a>
+                        <a href="{{ url_for('main.dashboard') }}" class="btn btn-info">Ver Panel</a>
+                        <a href="{{ url_for('main.student_list') }}" class="btn btn-secondary">Ver Estudiantes</a>
+                        
+                        <form action="{{ url_for('main.fix_duplicates') }}" method="post" class="d-inline" onsubmit="return confirm('¿Estás seguro que deseas corregir duplicados? Esta operación puede tomar tiempo.');">
+                            <button type="submit" class="btn btn-warning">Corregir Duplicados</button>
+                        </form>
+                        
+                        <form action="{{ url_for('main.clear_data') }}" method="post" class="d-inline" onsubmit="return confirm('¿Estás seguro que deseas borrar TODOS los datos? Esta acción no se puede deshacer.');">
+                            <button type="submit" class="btn btn-danger">Borrar Datos</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Estadísticas de Estudiantes</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Tipo</th>
+                                    <th>Cantidad</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Activos</td>
+                                    <td>{{ active_unique }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Inactivos</td>
+                                    <td>{{ inactive_unique }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Re-Inscriptos</td>
+                                    <td>{{ reregistered_unique }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Ingresantes</td>
+                                    <td>{{ incoming_unique }}</td>
+                                </tr>
+                                <tr class="table-info">
+                                    <td>Total Único</td>
+                                    <td>{{ total_unique }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Estudiantes con Múltiples Estados</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Combinación</th>
+                                    <th>Cantidad</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Activos + Re-Inscriptos</td>
+                                    <td>{{ active_and_reenrolled }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Activos + Ingresantes</td>
+                                    <td>{{ active_and_incoming }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 

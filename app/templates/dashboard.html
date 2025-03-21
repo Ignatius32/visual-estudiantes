@@ -367,17 +367,45 @@ function updateCharts(data) {
         logDebug('debugChartJs', 'Gráfico de carreras creado correctamente');
     }
 
-    // Combined Course Distribution Chart
+    // Course Distribution Chart - Modified to handle course+career format
     const courseLabels = Array.from(new Set([
         ...Object.keys(data.course_distribution?.['re-enrolled'] || {}),
         ...Object.keys(data.course_distribution?.['incoming'] || {})
     ]));
 
-    const courseReEnrolledData = courseLabels.map(label => 
+    // Parse course names to extract course and career info
+    const parsedCourseLabels = courseLabels.map(label => {
+        const match = label.match(/^(.+) \[(.+)\]$/);
+        if (match) {
+            return {
+                fullLabel: label,
+                courseName: match[1].trim(),
+                careerName: match[2].trim()
+            };
+        }
+        return {
+            fullLabel: label,
+            courseName: label,
+            careerName: "No especificada"
+        };
+    });
+
+    // Sort by career name first, then by course name
+    parsedCourseLabels.sort((a, b) => {
+        if (a.careerName === b.careerName) {
+            return a.courseName.localeCompare(b.courseName);
+        }
+        return a.careerName.localeCompare(b.careerName);
+    });
+
+    // Create datasets with the sorted labels
+    const sortedCourseLabels = parsedCourseLabels.map(item => item.fullLabel);
+    
+    const courseReEnrolledData = sortedCourseLabels.map(label => 
         (data.course_distribution?.['re-enrolled'] || {})[label] || 0
     );
     
-    const courseIncomingData = courseLabels.map(label => 
+    const courseIncomingData = sortedCourseLabels.map(label => 
         (data.course_distribution?.['incoming'] || {})[label] || 0
     );
     
@@ -385,11 +413,16 @@ function updateCharts(data) {
     const totalCourseReEnrolled = courseReEnrolledData.reduce((a, b) => a + b, 0);
     const totalCourseIncoming = courseIncomingData.reduce((a, b) => a + b, 0);
     
-    // Create labels with totals for each course
-    const formattedCourseLabels = courseLabels.map((label, index) => {
+    // Create formatted labels for display
+    const formattedCourseLabels = parsedCourseLabels.map((item, index) => {
         const courseTotal = courseReEnrolledData[index] + courseIncomingData[index];
-        return `${label} (${courseTotal})`;
+        return `${item.courseName} (${courseTotal})`;
     });
+    
+    // Create tooltips that show both course name and career
+    const tooltipLabels = parsedCourseLabels.map(item => 
+        `${item.courseName} - Carrera: ${item.careerName}`
+    );
     
     // Only create chart if we have data
     if (courseLabels.length > 0) {
@@ -450,6 +483,11 @@ function updateCharts(data) {
                     },
                     tooltip: {
                         callbacks: {
+                            title: function(context) {
+                                // Show course name with career in tooltip title
+                                const index = context[0].dataIndex;
+                                return tooltipLabels[index];
+                            },
                             label: function(context) {
                                 const label = context.dataset.label || '';
                                 const value = context.raw || 0;

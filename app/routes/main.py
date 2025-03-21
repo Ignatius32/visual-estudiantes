@@ -4,6 +4,7 @@ from flask_login import login_user, logout_user, login_required, current_user
 import pandas as pd
 import os
 from datetime import datetime
+from sqlalchemy import text
 
 from app.models import Student, Career, Course, Status, User, student_career, student_course, student_status
 from app import db
@@ -152,6 +153,9 @@ def process_file(filepath, file_type):
     total_rows = len(df)
     status.source_row_count = total_rows
     db.session.commit()
+    
+    # Track processed students to prevent duplicate status assignments
+    processed_students = set()
 
     # Process each row in the dataframe
     for _, row in df.iterrows():
@@ -210,6 +214,13 @@ def process_file(filepath, file_type):
             # Commit to ensure student has an ID
             db.session.commit()
             
+            # Track this student to prevent duplicate status assignments within same file
+            student_key = f"{student.id}_{status.id}"
+            if student_key in processed_students:
+                # Skip this student-status combination as it's already been processed
+                continue
+            processed_students.add(student_key)
+            
             # Validate career data before processing
             if pd.isna(row.get('Carrera')) or str(row.get('Carrera')).lower() == 'nan':
                 raise ValueError(f"Missing or invalid career name for student {row['Legajo']}")
@@ -247,7 +258,7 @@ def process_file(filepath, file_type):
             if materia_col and pd.notna(row[materia_col]) and str(row[materia_col]).lower() != 'nan':
                 course_name = str(row[materia_col]).strip()
                 
-                # Look for existing course with same name and career
+                # Look for existing course with same name and SAME CAREER
                 course = Course.query.filter_by(
                     name=course_name,
                     career_id=career.id
@@ -310,5 +321,163 @@ def clear_data():
     except Exception as e:
         db.session.rollback()
         flash(f'Error clearing data: {str(e)}', 'error')
+    
+    return redirect(url_for('main.index'))
+
+@main.route('/fix-duplicates', methods=['POST'])
+@login_required
+def fix_duplicates():
+    """
+    Identifies and removes duplicate student associations in the database.
+    This fixes incorrect student counts in the dashboard.
+    """
+    try:
+        # 1. Find duplicate student-status entries
+        status_duplicates = db.session.execute(text("""
+            WITH duplicates AS (
+                SELECT student_id, status_id, COUNT(*) as count
+                FROM student_status
+                GROUP BY student_id, status_id
+                HAVING COUNT(*) > 1
+            )
+            SELECT ss.student_id, ss.status_id, s.legajo, st.name as status_name
+            FROM student_status ss
+            JOIN duplicates d ON ss.student_id = d.student_id AND ss.status_id = d.status_id
+            JOIN student s ON ss.student_id = s.id
+            JOIN status st ON ss.status_id = st.id
+            ORDER BY ss.student_id, ss.status_id
+        """))
+        
+        # Process and remove duplicate entries from student_status
+        status_processed = {}
+        for row in status_duplicates:
+            key = f"{row.student_id}_{row.status_id}"
+            if key not in status_processed:
+                status_processed[key] = True
+                continue
+            
+            # Delete the duplicate association
+            db.session.execute(text(
+                "DELETE FROM student_status WHERE student_id = :student_id AND status_id = :status_id LIMIT 1"
+            ), {"student_id": row.student_id, "status_id": row.status_id})
+            
+        # 2. Find duplicate student-course entries
+        course_duplicates = db.session.execute(text("""
+            WITH duplicates AS (
+                SELECT student_id, course_id, COUNT(*) as count
+                FROM student_course
+                GROUP BY student_id, course_id
+                HAVING COUNT(*) > 1
+            )
+            SELECT sc.student_id, sc.course_id, s.legajo, c.name as course_name
+            FROM student_course sc
+            JOIN duplicates d ON sc.student_id = d.student_id AND sc.course_id = d.course_id
+            JOIN student s ON sc.student_id = s.id
+            JOIN course c ON sc.course_id = c.id
+            ORDER BY sc.student_id, sc.course_id
+        """))
+        
+        # Process and remove duplicate entries from student_course
+        course_processed = {}
+        for row in course_duplicates:
+            key = f"{row.student_id}_{row.course_id}"
+            if key not in course_processed:
+                course_processed[key] = True
+                continue
+            
+            # Delete the duplicate association
+            db.session.execute(text(
+                "DELETE FROM student_course WHERE student_id = :student_id AND course_id = :course_id LIMIT 1"
+            ), {"student_id": row.student_id, "course_id": row.course_id})
+            
+        # 3. Find duplicate student-career entries
+        career_duplicates = db.session.execute(text("""
+            WITH duplicates AS (
+                SELECT student_id, career_id, COUNT(*) as count
+                FROM student_career
+                GROUP BY student_id, career_id
+                HAVING COUNT(*) > 1
+            )
+            SELECT sc.student_id, sc.career_id, s.legajo, c.name as career_name
+            FROM student_career sc
+            JOIN duplicates d ON sc.student_id = d.student_id AND sc.career_id = d.career_id
+            JOIN student s ON sc.student_id = s.id
+            JOIN career c ON sc.career_id = c.id
+            ORDER BY sc.student_id, sc.career_id
+        """))
+        
+        # Process and remove duplicate entries from student_career
+        career_processed = {}
+        for row in career_duplicates:
+            key = f"{row.student_id}_{row.career_id}"
+            if key not in career_processed:
+                career_processed[key] = True
+                continue
+            
+            # Delete the duplicate association
+            db.session.execute(text(
+                "DELETE FROM student_career WHERE student_id = :student_id AND career_id = :career_id LIMIT 1"
+            ), {"student_id": row.student_id, "career_id": row.career_id})
+        
+        # 4. Fix incorrect course associations (courses assigned to wrong careers)
+        # This will list any courses that might have been incorrectly associated
+        incorrect_associations = db.session.execute(text("""
+            SELECT s.id as student_id, s.legajo, c.id as course_id, c.name as course_name, 
+                   ca.id as career_id, ca.name as career_name
+            FROM student s
+            JOIN student_course sc ON s.id = sc.student_id
+            JOIN course c ON sc.course_id = c.id
+            JOIN career ca ON c.career_id = ca.id
+            LEFT JOIN student_career sca ON s.id = sca.student_id AND ca.id = sca.career_id
+            WHERE sca.student_id IS NULL
+        """))
+        
+        # For each incorrect association, we either:
+        # 1. Remove the course association if student doesn't belong to that career
+        # 2. Add the career to the student's list of careers
+        for row in incorrect_associations:
+            # Check if student is in a different career with same course name
+            alternate_course = db.session.execute(text("""
+                SELECT c.id
+                FROM course c
+                JOIN career ca ON c.career_id = ca.id
+                JOIN student_career sc ON ca.id = sc.career_id
+                WHERE sc.student_id = :student_id AND c.name = :course_name
+                LIMIT 1
+            """), {"student_id": row.student_id, "course_name": row.course_name}).fetchone()
+            
+            if alternate_course:
+                # Student has a course with same name in a different career
+                # Remove incorrect course association
+                db.session.execute(text(
+                    "DELETE FROM student_course WHERE student_id = :student_id AND course_id = :course_id"
+                ), {"student_id": row.student_id, "course_id": row.course_id})
+            else:
+                # Add the career to the student's list if appropriate
+                # This assumes course exists in a career that student should be in
+                db.session.execute(text(
+                    "INSERT INTO student_career (student_id, career_id) VALUES (:student_id, :career_id)"
+                ), {"student_id": row.student_id, "career_id": row.career_id})
+        
+        # 5. Fix any courses with no career association
+        courses_without_career = db.session.execute(text("""
+            SELECT id, name FROM course WHERE career_id IS NULL
+        """))
+        
+        for row in courses_without_career:
+            # Delete these courses as they're invalid in our model
+            db.session.execute(text(
+                "DELETE FROM student_course WHERE course_id = :course_id"
+            ), {"course_id": row.id})
+            
+            db.session.execute(text(
+                "DELETE FROM course WHERE id = :course_id"
+            ), {"course_id": row.id})
+        
+        db.session.commit()
+        flash('Database has been fixed. Duplicates removed and incorrect associations corrected.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error fixing duplicates: {str(e)}', 'error')
     
     return redirect(url_for('main.index'))
